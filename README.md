@@ -1,34 +1,33 @@
 # 🔥 Resume Roaster
 
-An AI-powered resume analyzer that scores your resume against a job description — and roasts your gaps without mercy.
+A full-stack AI web app that scores your resume against a job description — and roasts your gaps without mercy.
 
-Built with Python and the Groq LLM API (Llama 3.3 70B).
+Paste your resume, paste a job description, hit the button, and get judged by an LLM playing a savage tech recruiter.
 
 ## What it does
 
-Feed it your resume and a target job description, and it returns:
 - **SCORE** — how well you match, 0–100
 - **MISSING** — keywords from the job description your resume lacks
-- **STRENGTHS** — what's actually working
-- **ROAST** — a brutally honest take on where you fall short
+- **STRENGTHS** — what's actually working (still a little sarcastic)
+- **ROAST** — a brutally honest, funny take on your weak spots
+
+## Tech Stack
+
+**Backend:** Python · FastAPI · Groq LLM API (Llama 3.3 70B)
+**Frontend:** HTML · CSS · JavaScript (fetch)
+**Other:** python-dotenv, CORS, prompt engineering
 
 ## How it works
 
-1. Reads resume text from a file
-2. Sends it to an LLM with a job description and a carefully engineered prompt
-3. Returns structured, parseable feedback
+A JavaScript frontend sends the resume + job description to a FastAPI backend, which calls an LLM with a carefully engineered prompt and returns structured feedback — rendered live on the page.
 
-## Tech
-
-`Python` · `Groq API` · `LLM prompt engineering` · `python-dotenv`
-
-## Running it
+## Running locally
 
 1. Clone the repo
-2. `pip install groq python-dotenv`
-3. Add your Groq API key to a `.env` file: `GROQ_API_KEY=your_key`
-4. Put your resume in `resume.txt`
-5. `python roaster.py`
+2. `pip install fastapi uvicorn groq python-dotenv`
+3. Create a `.env` file with your Groq key: `GROQ_API_KEY=your_key`
+4. Start the backend: `python -m uvicorn app:app --reload`
+5. Open `index.html` in your browser
 
 ---
-*Built while learning AI engineering — one roast at a time.*
+*Built while learning AI engineering and full-stack development — one roast at a time.*
