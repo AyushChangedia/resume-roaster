@@ -39,6 +39,8 @@ def roast(request: RoastRequest):
         ],
     )
     return {"result": response.choices[0].message.content}
-    @app.get("/")
+
+
+@app.get("/")
 def serve_frontend():
     return FileResponse("index.html")
