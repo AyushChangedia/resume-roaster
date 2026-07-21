@@ -1,0 +1,54 @@
+Ayush Sameer Changedia
++91 9175142006 | ayushc7711@gmail.com | linkedin.com/in/[[LINKEDIN-USERNAME]] |
+github.com/[[GITHUB-USERNAME]]
+Education
+MIT World Peace University Pune, India
+B.Sc. Computer Science — CGPA: 8.2/10 2025 – 2029
+• Class XII: 80% | Class X: 70%
+Experience
+AI Engineering Intern May 2026 – Jun 2026
+NeuralForge Labs Remote
+• Built an LLM-powered resume-screening tool using Python, FastAPI, and OpenAI APIs, automating
+first-round candidate shortlisting
+Software Development Intern Apr 2026 – May 2026
+yteNest Technologies Remote
+• Developed scalable REST APIs for product, order, and payment workflows using Node.js, Express.js, and
+PostgreSQL
+• Implemented JWT authentication, input validation, and optimized SQL queries, improving API performance
+and security
+Data Analytics Intern Jan 2026 – Mar 2026
+Mindenious Remote
+• Analyzed website, marketing, and sales data using SQL, Excel, Power BI, Python (Pandas), and Google
+Analytics 4
+• Developed dashboards tracking conversion rates, customer behavior, and campaign ROI, enabling
+data-driven marketing decisions
+Projects
+ORB Strategy Backtester | Python, Pine Script v5, TradingView MCP 2026
+• Automated opening-range-breakout backtesting on Bank Nifty futures via a custom TradingView MCP
+integration; executed a 6-month, 120-trade backtest at a 57.5% win rate
+• Engineered a parameter-optimization loop that isolated commission drag as the primary P&L leak,
+informing a lower-frequency, higher-net-return strategy variant
+Hackathon Builds — HACK MIT-WPU & Smart India Hackathon | AI/IoT prototypes 2025
+• Prototyped AI chatbots, an AI-based skill-assessment portal, and a smart energy-monitoring and
+attendance system across college and national-level hackathon sprints
+• Scoped, built, and demoed working solutions under hackathon deadlines in small collaborative teams
+Leadership & Additional Experience
+Internshala Student Partner (ISP) [[ISP-START]] – [[ISP-END]]
+Internshala — MIT-WPU Campus Pune, India
+• Selected as 1 of 7 partners from 720+ applicants (top 1%); onboarded 29 students and mentored them
+on upskilling paths
+Digital Marketing Mar 2026 – [[MKT-END-MONTH]] 2026
+Mindenious Remote
+• Closed 27 deals across 12 client accounts, owning the full cycle from outreach to closure
+Fundraising Intern 2026
+NayePankh Foundation & She Can Foundation Remote
+• Drove donation campaigns funding education access for underprivileged children
+Technical Skills
+Languages: Python, C++, JavaScript, SQL, HTML/CSS
+Frameworks & Libraries: Node.js, Express.js, FastAPI, REST APIs, OpenAI/LLM APIs, NumPy, Pandas, jQuery
+Databases & Tools: PostgreSQL, MySQL, Git & GitHub, Power BI, Google Analytics 4, Excel, TradingView (Pine
+Script)
+Core Concepts: OOP, DBMS, Data Structures, REST Architecture, JWT Authentication, Data Analysis
+Certifications & Achievements
+3rd Place — [[3RD-PLACE-HACKATHON]] (2025)
+HackerRank: SQL (Advanced), SQL (Intermediate), Problem Solving, Critical Thinking
