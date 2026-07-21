@@ -29,7 +29,7 @@
       const resume = document.getElementById("resume").value;
       const jd = document.getElementById("jd").value;
 
-      const response = await fetch("http://127.0.0.1:8000/roast", {
+      const response = await fetch("/roast", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ resume: resume, job_description: jd })

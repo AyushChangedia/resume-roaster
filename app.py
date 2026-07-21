@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 from groq import Groq
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 
 load_dotenv()
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
@@ -38,3 +39,6 @@ def roast(request: RoastRequest):
         ],
     )
     return {"result": response.choices[0].message.content}
+    @app.get("/")
+def serve_frontend():
+    return FileResponse("index.html")
