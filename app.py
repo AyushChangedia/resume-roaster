@@ -2,7 +2,7 @@ import os
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field, field_validator
 from dotenv import load_dotenv
-from groq import Groq
+from groq import APIConnectionError, APIStatusError, APITimeoutError, Groq
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
@@ -32,6 +32,10 @@ MODEL = "llama-3.3-70b-versatile"
 MAX_RESUME_CHARS = 20_000
 MAX_JD_CHARS = 10_000
 
+# A roast is five sentences. If the model has not started answering in half a
+# minute it is not going to, and the browser has long since given up.
+REQUEST_TIMEOUT_SECONDS = 30.0
+
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
@@ -57,13 +61,34 @@ class RoastRequest(BaseModel):
 @app.post("/roast")
 def roast(request: RoastRequest):
     user_prompt = build_user_prompt(request.resume, request.job_description)
-    response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_prompt},
-        ],
-    )
+
+    try:
+        response = client.chat.completions.create(
+            model=MODEL,
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": user_prompt},
+            ],
+            timeout=REQUEST_TIMEOUT_SECONDS,
+        )
+    except APIStatusError as error:
+        # Rate limits are the one upstream failure a user can act on, so they
+        # get their own message rather than the generic one.
+        if error.status_code == 429:
+            raise HTTPException(
+                status_code=429,
+                detail="The roaster is rate limited right now. Give it a minute.",
+            ) from error
+        raise HTTPException(
+            status_code=502,
+            detail="The model refused to answer. Try again in a moment.",
+        ) from error
+    except (APIConnectionError, APITimeoutError) as error:
+        raise HTTPException(
+            status_code=504,
+            detail="Could not reach the model in time. Try again in a moment.",
+        ) from error
+
     raw = response.choices[0].message.content
 
     try:
