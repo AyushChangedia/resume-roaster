@@ -1,0 +1,57 @@
+# CI for Resume Roaster.
+#
+# No secret is needed and none is configured. Every test stubs the model, so a
+# fork's pull request runs the full suite without access to a Groq key and
+# without the ability to spend one.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.11', '3.12']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Install
+        run: pip install -r requirements-dev.txt
+
+      # A dummy key, because app.py now refuses to import without one. It is
+      # never used: the model call is monkeypatched in every test.
+      - name: Tests
+        run: pytest -q
+        env:
+          GROQ_API_KEY: ci-placeholder-never-called
+
+      # The whole point of the app is the tone, and the tone lives in a string
+      # that nothing else would notice going soft. Run it on its own so a
+      # failure here reads as "the roaster went gentle" rather than as one
+      # anonymous red tick among many.
+      - name: Tone has not softened
+        run: pytest tests/test_prompt.py -q
+        env:
+          GROQ_API_KEY: ci-placeholder-never-called
