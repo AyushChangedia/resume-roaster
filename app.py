@@ -6,6 +6,7 @@ from groq import Groq
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
+from parsing import RoastFormatError, parse_roast
 from prompt import SYSTEM_PROMPT, build_user_prompt
 
 load_dotenv()
@@ -33,7 +34,14 @@ def roast(request: RoastRequest):
             {"role": "user", "content": user_prompt},
         ],
     )
-    return {"result": response.choices[0].message.content}
+    raw = response.choices[0].message.content
+
+    try:
+        return parse_roast(raw)
+    except RoastFormatError:
+        # The roast is still readable even when the labels are not where they
+        # should be, so hand it over rather than failing the request.
+        return {"score": None, "missing": "", "roast": raw, "verdict": "", "raw": raw}
 
 
 @app.get("/")
