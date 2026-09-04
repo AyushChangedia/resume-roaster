@@ -1,0 +1,38 @@
+Jordan Avery Blake
+jordan.blake@example.com | linkedin.com/in/example | github.com/example
+
+Education
+Example State University
+B.Sc. Computer Science — CGPA: 8.1/10                        2024 – 2028
+• Relevant coursework: Data Structures, Operating Systems, Machine Learning
+
+Experience
+
+AI Engineering Intern                                  May 2026 – Jun 2026
+Placeholder Labs                                                   Remote
+• Built an LLM-powered document summariser using Python and a hosted model API
+• Wrote prompt templates and evaluated outputs against a small labelled set
+
+Backend Intern                                         Jan 2026 – Mar 2026
+Example Systems                                                    Remote
+• Developed REST endpoints for a catalogue service using Node.js and Express
+• Added input validation and wrote integration tests for the checkout flow
+
+Projects
+
+Notes CLI
+• Terminal note-taking tool in Python with tagging and full-text search
+• Stores notes as plain Markdown files; no database
+
+Weather Dashboard
+• Fetches a public forecast API and renders a seven-day chart
+• HTML, CSS and vanilla JavaScript
+
+Skills
+Languages: Python, JavaScript, SQL, Java
+Frameworks: FastAPI, Express, React
+Tools: Git, Docker, PostgreSQL, Linux
+
+Certifications
+• Introduction to Machine Learning — online course, 2025
+• Backend Development Bootcamp — online course, 2025

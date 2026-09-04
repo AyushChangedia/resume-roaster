@@ -7,7 +7,11 @@ from prompt import SYSTEM_PROMPT, build_user_prompt
 load_dotenv()
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-with open("resume.txt", "r", encoding="utf-8") as f:
+# sample_resume.txt is a synthetic stand-in. Point this at your own file to
+# roast it — just do not commit that file to a public repository.
+RESUME_PATH = os.getenv("RESUME_PATH", "sample_resume.txt")
+
+with open(RESUME_PATH, "r", encoding="utf-8") as f:
     resume = f.read()
 
 job_description = """
