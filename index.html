@@ -1,43 +1,193 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Resume Roaster 🔥</title>
   <style>
-    body { font-family: sans-serif; max-width: 700px; margin: 40px auto; padding: 0 20px; background: #1a1a1a; color: #eee; }
-    h1 { text-align: center; }
-    textarea { width: 100%; height: 140px; margin: 10px 0; padding: 10px; box-sizing: border-box; background: #2a2a2a; color: #eee; border: 1px solid #444; border-radius: 6px; font-family: sans-serif; }
-    button { width: 100%; padding: 14px; font-size: 16px; background: #e63946; color: white; border: none; border-radius: 6px; cursor: pointer; }
-    button:hover { background: #c1121f; }
-    #result { white-space: pre-wrap; background: #2a2a2a; padding: 20px; border-radius: 6px; margin-top: 20px; min-height: 40px; }
+    :root {
+      --bg: #141414;
+      --panel: #1f1f1f;
+      --line: #333;
+      --text: #ececec;
+      --muted: #8a8a8a;
+      --red: #e63946;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      max-width: 760px; margin: 0 auto; padding: 40px 20px 80px;
+      background: var(--bg); color: var(--text); line-height: 1.55;
+    }
+    h1 { text-align: center; margin: 0 0 6px; font-size: 2rem; }
+    .tagline { text-align: center; color: var(--muted); margin: 0 0 28px; }
+    textarea {
+      width: 100%; height: 150px; margin: 8px 0 14px; padding: 12px;
+      background: var(--panel); color: var(--text);
+      border: 1px solid var(--line); border-radius: 6px;
+      font-family: inherit; font-size: 15px; resize: vertical;
+    }
+    textarea:focus { outline: 2px solid var(--red); outline-offset: -1px; }
+    button {
+      width: 100%; padding: 15px; font-size: 16px; font-weight: 600;
+      background: var(--red); color: #fff; border: none; border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover:not(:disabled) { background: #c1121f; }
+    button:disabled { background: #5a2a2e; color: #bbb; cursor: not-allowed; }
+
+    #result { margin-top: 28px; }
+    #result:empty { display: none; }
+
+    .status { color: var(--muted); text-align: center; padding: 20px; }
+    .error {
+      background: var(--panel); border: 1px solid var(--red);
+      border-left: 4px solid var(--red);
+      border-radius: 6px; padding: 16px; color: var(--text);
+    }
+
+    /* The score is the headline: one number, unmissable. */
+    .score-card {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+      padding: 22px; text-align: center; margin-bottom: 16px;
+    }
+    .score-number { font-size: 4rem; font-weight: 800; line-height: 1; color: var(--red); }
+    .score-label { color: var(--muted); text-transform: uppercase; letter-spacing: .12em; font-size: .75rem; }
+    .score-band { margin-top: 8px; color: var(--muted); font-size: .95rem; }
+
+    section.block {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+      padding: 18px; margin-bottom: 16px;
+    }
+    section.block h2 {
+      margin: 0 0 10px; font-size: .78rem; text-transform: uppercase;
+      letter-spacing: .12em; color: var(--muted); font-weight: 700;
+    }
+    .roast { white-space: pre-wrap; font-size: 1.05rem; }
+
+    /* The verdict is the last thing read and gets no decoration to hide behind. */
+    .verdict {
+      border-left: 4px solid var(--red);
+      font-size: 1.15rem; font-weight: 600;
+    }
   </style>
 </head>
 <body>
   <h1>Resume Roaster 🔥</h1>
-  <p>Paste your resume and a job description. Prepare to be judged.</p>
+  <p class="tagline">Paste your resume and a job description. There is no encouraging part.</p>
 
-  <textarea id="resume" placeholder="Paste your resume here..."></textarea>
-  <textarea id="jd" placeholder="Paste the job description here..."></textarea>
-  <button onclick="roastMe()">Roast My Resume 🔥</button>
+  <textarea id="resume" aria-label="Your resume" placeholder="Paste your resume here..."></textarea>
+  <textarea id="jd" aria-label="The job description" placeholder="Paste the job description here..."></textarea>
+  <button id="roastBtn" type="button">Roast My Resume 🔥</button>
 
-  <div id="result"></div>
+  <div id="result" aria-live="polite"></div>
 
   <script>
-    async function roastMe() {
-      const resultBox = document.getElementById("result");
-      resultBox.textContent = "Roasting... 🔥";
+    const btn = document.getElementById("roastBtn");
+    const resultBox = document.getElementById("result");
 
-      const resume = document.getElementById("resume").value;
-      const jd = document.getElementById("jd").value;
-
-      const response = await fetch("/roast", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resume: resume, job_description: jd })
-      });
-
-      const data = await response.json();
-      resultBox.textContent = data.result;
+    /** Plain text into an element — never innerHTML with model output. */
+    function block(title, body, className) {
+      const section = document.createElement("section");
+      section.className = "block" + (className ? " " + className : "");
+      if (title) {
+        const heading = document.createElement("h2");
+        heading.textContent = title;
+        section.append(heading);
+      }
+      const paragraph = document.createElement("div");
+      paragraph.textContent = body;
+      section.append(paragraph);
+      return section;
     }
+
+    /** The same bands the prompt scores against, in the reader's words. */
+    function bandFor(score) {
+      if (score >= 90) return "They would interview you today. Suspicious.";
+      if (score >= 70) return "Real experience in most of what they asked for.";
+      if (score >= 50) return "The keywords are there. The evidence is thin.";
+      if (score >= 30) return "A course list wearing a resume.";
+      return "Not a candidate for this role.";
+    }
+
+    function render(data) {
+      resultBox.replaceChildren();
+
+      if (typeof data.score === "number") {
+        const card = document.createElement("div");
+        card.className = "score-card";
+        const label = document.createElement("div");
+        label.className = "score-label";
+        label.textContent = "Match score";
+        const number = document.createElement("div");
+        number.className = "score-number";
+        number.textContent = data.score;
+        const band = document.createElement("div");
+        band.className = "score-band";
+        band.textContent = bandFor(data.score);
+        card.append(label, number, band);
+        resultBox.append(card);
+      }
+
+      if (data.missing) resultBox.append(block("Missing", data.missing));
+      if (data.roast) resultBox.append(block("Roast", data.roast, "roast"));
+      if (data.verdict) resultBox.append(block("Verdict", data.verdict, "verdict"));
+    }
+
+    function showError(message) {
+      resultBox.replaceChildren();
+      const box = document.createElement("div");
+      box.className = "error";
+      box.textContent = message;
+      resultBox.append(box);
+    }
+
+    async function roastMe() {
+      const resume = document.getElementById("resume").value.trim();
+      const jd = document.getElementById("jd").value.trim();
+
+      if (!resume || !jd) {
+        showError("Both boxes, please. It cannot roast a blank page — that is the one resume with no weak points.");
+        return;
+      }
+
+      // Disabling matters: every click is a real API call, and the old page
+      // let you fire ten of them while the first was still in flight.
+      btn.disabled = true;
+      btn.textContent = "Roasting...";
+      resultBox.replaceChildren();
+      const status = document.createElement("p");
+      status.className = "status";
+      status.textContent = "Reading it. This will not take long. 🔥";
+      resultBox.append(status);
+
+      try {
+        const response = await fetch("/roast", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ resume: resume, job_description: jd })
+        });
+
+        if (!response.ok) {
+          let detail = `The server said no (HTTP ${response.status}).`;
+          try {
+            const body = await response.json();
+            if (body && body.detail) detail = body.detail;
+          } catch (parseError) { /* not JSON — the status line is all we have */ }
+          showError(detail);
+          return;
+        }
+
+        render(await response.json());
+      } catch (err) {
+        showError("Could not reach the server. Check your connection and try again.");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Roast My Resume 🔥";
+      }
+    }
+
+    btn.addEventListener("click", roastMe);
   </script>
 </body>
 </html>

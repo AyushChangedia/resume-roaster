@@ -1,4 +1,6 @@
-fastapi
-uvicorn
-groq
-python-dotenv
+# Pinned. An unpinned deploy resolves to whatever was published that morning,
+# so a build that worked yesterday can fail today with nothing changed here.
+fastapi==0.141.1
+uvicorn==0.52.4
+groq==1.7.0
+python-dotenv==1.2.3

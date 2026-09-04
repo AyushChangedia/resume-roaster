@@ -1,2 +1,7 @@
 .env
 __pycache__/
+# Your actual resume. resume.txt used to be committed here, complete with a
+# real phone number, on a public repository.
+resume.txt
+resume.pdf
+*.resume.txt
