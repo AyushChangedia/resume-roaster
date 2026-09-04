@@ -18,9 +18,11 @@ from typing import Optional
 SECTIONS = ("SCORE", "MISSING", "ROAST", "VERDICT")
 
 # A label at the start of a line, allowing for the bold the model sometimes
-# adds unbidden: "**ROAST:**" is the same section as "ROAST:".
+# adds unbidden. The emphasis can close on either side of the colon —
+# "**ROAST:**" and "**ROAST**:" are both the same section as "ROAST:" — and
+# the trailing pair has to be eaten or it survives into the section body.
 _LABEL = re.compile(
-    r"^\s*\**\s*(SCORE|MISSING|ROAST|VERDICT)\s*\**\s*:\s*",
+    r"^[ \t]*\**[ \t]*(SCORE|MISSING|ROAST|VERDICT)[ \t]*\**[ \t]*:[ \t]*\**[ \t]*",
     re.IGNORECASE | re.MULTILINE,
 )
 
