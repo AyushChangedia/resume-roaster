@@ -1,24 +1,51 @@
 # 🔥 Resume Roaster
 
-### An AI web app that scores your resume against any job description — and roasts your gaps without mercy.
+### An AI web app that scores your resume against a job description and then takes it apart. There is no encouraging section.
 
-Paste your resume, paste a job description, and get judged by an LLM playing a savage tech recruiter who has read 10,000 resumes and is tired of excuses.
+Paste your resume, paste a job description, and get read by an LLM playing the hiring manager who looks at it for eleven seconds, decides, and says out loud what everyone else only thinks.
 
 ## 🚀 Live Demo
 
 ### 👉 **[Try it live: resume-roaster-fr4i.onrender.com](https://resume-roaster-fr4i.onrender.com)**
 
 > ⏳ *Hosted on a free tier — the first load may take ~50 seconds to wake the server, then it's instant.*
-> 
 
 ## 💡 What it does
 
-Feed it your resume and a target job description, and it returns:
+Feed it your resume and a target job description, and it returns four things:
 
-- **📊 SCORE** — how well you match, 0–100
-- **❌ MISSING** — keywords from the job description your resume is missing
-- **✅ STRENGTHS** — what's actually working (with a hint of sarcasm)
-- **🔥 ROAST** — a brutally honest, genuinely funny take on your weak spots
+- **📊 SCORE** — how well you match, 0–100, on a stated curve rather than a vibe
+- **❌ MISSING** — keywords from the job description your resume does not have
+- **🔥 ROAST** — five sentences, every one of them naming something real from *your* resume
+- **⚰️ VERDICT** — one flat line, the thing said as it goes in the no pile
+
+### What it does not return
+
+There is no **STRENGTHS** section. There used to be, and removing it is the point.
+
+Two bullet points about what's working undid everything after them: the roast lands differently when it arrives immediately after a compliment, and the reader gets to stop at the nice part and close the tab. A roaster that also tells you what you're good at is a career counselor wearing a costume.
+
+The prompt says so explicitly — no strengths, no compliments, no encouraging closing line, no "but" — because a model trained to be helpful puts the praise back on its own if you only delete the field.
+
+### The scoring is not generous either
+
+`SCORE: 0-100` with no definition let the model anchor around 70, because 70 feels fair. It now scores on a curve with named bands, and three rules that catch what a padded resume actually does:
+
+| Band | Means |
+|------|-------|
+| 90–100 | Would interview you today. Almost nobody. |
+| 70–89 | Real, evidenced experience in most of what the JD asks for. |
+| 50–69 | The keywords are there. The evidence is thin. |
+| 30–49 | A course list wearing a resume. |
+| 0–29 | Not a candidate for this role. |
+
+A technology listed without a project using it caps the score at 55. Coursework is not experience. A personal project with no users is not production.
+
+### Where the line is
+
+It roasts the document and the choices in it — the claims, the gaps, the padding, the writing. It does not go after anyone's identity, background, name, or worth as a person.
+
+That is not squeamishness, it's what makes it work. A roast lands because the target earned it, and nobody earns it by existing. "Three internships and not one shipped thing" stings because it's true and specific; an insult about who you are is neither, and it isn't about the only thing here you can actually change.
 
 ## 🛠️ Tech Stack
 
@@ -27,35 +54,52 @@ Feed it your resume and a target job description, and it returns:
 | **Backend** | Python, FastAPI, Uvicorn |
 | **AI** | Groq LLM API (Llama 3.3 70B) |
 | **Frontend** | HTML, CSS, JavaScript (Fetch API) |
-| **Concepts** | REST API design, prompt engineering, CORS, environment-based secrets |
+| **Tests** | pytest — 70 tests, no API key needed |
 | **Deployment** | Render |
 
 ## ⚙️ How it works
 
-1. A **JavaScript frontend** collects the resume + job description and sends them to the backend via a `fetch` POST request.
-2. A **FastAPI backend** receives the data, injects it into a carefully engineered prompt, and calls an LLM.
-3. The model returns **structured feedback** (score, gaps, strengths, roast), which is rendered live on the page.
+1. The **frontend** collects the resume and job description and POSTs them to `/roast`.
+2. **FastAPI** validates them, builds the prompt, and calls the model.
+3. The reply is **parsed server-side** into `score`, `missing`, `roast` and `verdict`, so the page can render the score as a number rather than printing one wall of text.
 
-The API key is never stored in code — it's loaded from an environment variable, keeping secrets out of the repo.
+The API key is loaded from the environment, never committed. `app.py` refuses to start without it, so a misconfigured deploy fails on deploy rather than on the first person who tries it.
 
 ## 🖥️ Running locally
 
 ```bash
-# 1. Clone the repo
 git clone https://github.com/AyushChangedia/resume-roaster.git
 cd resume-roaster
 
-# 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. Add your Groq API key to a .env file
 echo GROQ_API_KEY=your_key_here > .env
 
-# 4. Start the server
 python -m uvicorn app:app --reload
 ```
 
-Then open **http://127.0.0.1:8000** in your browser.
+Then open **http://127.0.0.1:8000**.
+
+### Tests
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
+Every test stubs the model, so the suite needs no API key and cannot spend one.
+
+What's covered is the parsing (the only place a wrong answer is silent — a bad parse renders a blank card that looks exactly like the app working), the endpoint's validation and error handling, and **the prompt itself**.
+
+That last one is the unusual part and the most important. There is no compiler for tone. Nobody softens a prompt on purpose — it happens one reasonable-looking edit at a time until the app is encouraging again. So `tests/test_prompt.py` asserts that the STRENGTHS field is gone, that praise and hedging are banned by name, that the scoring curve still has its bands, and that the "roast the document, not the person" rule is still there. CI runs it as its own step, so when it goes soft the failure says *Tone has not softened* rather than being one red tick among seventy.
+
+### The CLI
+
+```bash
+RESUME_PATH=my_resume.txt python roaster.py
+```
+
+Defaults to `sample_resume.txt`, a synthetic resume built to be worth roasting. `resume.txt` and `resume.pdf` are gitignored — do not commit your own.
 
 ## 🔮 Roadmap
 
