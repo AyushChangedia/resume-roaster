@@ -36,13 +36,25 @@ MAX_JD_CHARS = 10_000
 # minute it is not going to, and the browser has long since given up.
 REQUEST_TIMEOUT_SECONDS = 30.0
 
-app = FastAPI()
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app = FastAPI(title="Resume Roaster")
+
+# The page is served from this same app, so same-origin requests need no CORS
+# header at all and the default is an empty list. ALLOWED_ORIGINS exists for
+# the case where the frontend is hosted separately; "*" let any site on the
+# internet spend this deployment's API quota through a visitor's browser.
+ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("ALLOWED_ORIGINS", "").split(",")
+    if origin.strip()
+]
+
+if ALLOWED_ORIGINS:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=ALLOWED_ORIGINS,
+        allow_methods=["POST"],
+        allow_headers=["Content-Type"],
+    )
 
 class RoastRequest(BaseModel):
     resume: str = Field(..., max_length=MAX_RESUME_CHARS)
