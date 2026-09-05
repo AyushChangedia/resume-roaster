@@ -1,11 +1,12 @@
 import os
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from pydantic import BaseModel, Field, field_validator
 from dotenv import load_dotenv
 from groq import APIConnectionError, APIStatusError, APITimeoutError, Groq
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
+from extraction import SUPPORTED, ExtractionError, extract_text
 from parsing import RoastFormatError, parse_roast
 from prompt import SYSTEM_PROMPT, build_user_prompt
 
@@ -31,6 +32,12 @@ MODEL = "llama-3.3-70b-versatile"
 # a 200k-character paste is somebody testing what happens.
 MAX_RESUME_CHARS = 20_000
 MAX_JD_CHARS = 10_000
+
+# An uploaded file is read into memory before it is parsed, so the cap is what
+# stops one request from being a memory problem. A text-layer resume PDF is
+# tens of kilobytes; 5 MB is generous enough that a real one never hits it and
+# small enough that it does not matter if somebody sends a hundred.
+MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 
 # A roast is five sentences. If the model has not started answering in half a
 # minute it is not going to, and the browser has long since given up.
@@ -109,6 +116,47 @@ def roast(request: RoastRequest):
         # The roast is still readable even when the labels are not where they
         # should be, so hand it over rather than failing the request.
         return {"score": None, "missing": "", "roast": raw, "verdict": "", "raw": raw}
+
+
+@app.post("/upload")
+async def upload(file: UploadFile = File(...)):
+    """
+    Turn an uploaded resume into text for the textarea.
+
+    This does not roast anything. It hands back what was extracted so the user
+    can read it, fix it, and then press the button — extraction is lossy
+    enough that going straight to the model would sometimes roast a layout
+    accident rather than a resume.
+    """
+    data = await file.read(MAX_UPLOAD_BYTES + 1)
+    if len(data) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"That file is bigger than {MAX_UPLOAD_BYTES // (1024 * 1024)} MB. "
+            "A resume should be a few hundred kilobytes.",
+        )
+
+    try:
+        text = extract_text(data, file.filename or "")
+    except ExtractionError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+    # Truncating here rather than refusing: somebody who uploads a thesis
+    # should get the first twenty thousand characters in the box, see it, and
+    # decide — not be told no with nothing to show for it.
+    truncated = len(text) > MAX_RESUME_CHARS
+    return {
+        "text": text[:MAX_RESUME_CHARS],
+        "filename": file.filename or "",
+        "characters": len(text),
+        "truncated": truncated,
+    }
+
+
+@app.get("/formats")
+def formats():
+    """What the file picker should accept. Built from one table in extraction.py."""
+    return {"extensions": sorted(SUPPORTED), "labels": SUPPORTED}
 
 
 @app.get("/")
