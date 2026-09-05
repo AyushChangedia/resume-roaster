@@ -2,7 +2,7 @@
 
 ### An AI web app that scores your resume against a job description and then takes it apart. There is no encouraging section.
 
-Paste your resume, paste a job description, and get read by an LLM playing the hiring manager who looks at it for eleven seconds, decides, and says out loud what everyone else only thinks.
+Upload or paste your resume, paste a job description, and get read by an LLM playing the hiring manager who looks at it for eleven seconds, decides, and says out loud what everyone else only thinks.
 
 ## 🚀 Live Demo
 
@@ -12,7 +12,7 @@ Paste your resume, paste a job description, and get read by an LLM playing the h
 
 ## 💡 What it does
 
-Feed it your resume and a target job description, and it returns four things:
+Drop in your resume — **PDF, Word, or plain text** — or paste it. Add a target job description. It returns four things:
 
 - **📊 SCORE** — how well you match, 0–100, on a stated curve rather than a vibe
 - **❌ MISSING** — keywords from the job description your resume does not have
@@ -47,21 +47,50 @@ It roasts the document and the choices in it — the claims, the gaps, the paddi
 
 That is not squeamishness, it's what makes it work. A roast lands because the target earned it, and nobody earns it by existing. "Three internships and not one shipped thing" stings because it's true and specific; an insult about who you are is neither, and it isn't about the only thing here you can actually change.
 
+## 📄 Uploading a resume
+
+Drop a file on the box or click to choose one. **PDF, `.docx`, `.txt` and `.md`.**
+
+The extracted text goes **into the textarea, not straight to the model.** That
+is deliberate. PDF extraction is lossy and resume layouts are hostile to it —
+two columns interleave, tables scramble, icon fonts come out as garbage — so
+you get to see what was actually read before paying for a roast of it. Nothing
+is roasted until you press the button.
+
+The file type is decided by its **bytes, not its name**: a PNG renamed
+`resume.pdf` is refused, and a `.docx` renamed `.pdf` is read anyway, because
+that mistake is common and the content is fine.
+
+Four things it will not read, each of which tells you what to do instead:
+
+| | |
+|---|---|
+| **A scanned PDF** | A photo of a page has no text in it. `pypdf` returns an empty string rather than an error, so this is caught by length — otherwise it would upload as a blank resume and get roasted for being empty. |
+| **A password-protected PDF** | Tried with an empty password first, which opens the "restricted against editing" case Word produces. |
+| **A `.doc`** | The old binary format. Save it as `.docx`. |
+| **Anything over 5 MB** | Refused after reading 5 MB, not after loading the whole thing. A text-layer resume PDF is tens of kilobytes. |
+
+A resume longer than 20,000 characters is **truncated rather than refused** —
+you get the first part in the box and are told how much was cut, instead of a
+refusal with nothing to show for it.
+
 ## 🛠️ Tech Stack
 
 | Layer | Technologies |
 |-------|-------------|
 | **Backend** | Python, FastAPI, Uvicorn |
 | **AI** | Groq LLM API (Llama 3.3 70B) |
-| **Frontend** | HTML, CSS, JavaScript (Fetch API) |
-| **Tests** | pytest — 70 tests, no API key needed |
+| **Frontend** | HTML, CSS, JavaScript (Fetch API, drag & drop) |
+| **Parsing** | pypdf, python-docx |
+| **Tests** | pytest — 109 tests, no API key needed |
 | **Deployment** | Render |
 
 ## ⚙️ How it works
 
-1. The **frontend** collects the resume and job description and POSTs them to `/roast`.
-2. **FastAPI** validates them, builds the prompt, and calls the model.
-3. The reply is **parsed server-side** into `score`, `missing`, `roast` and `verdict`, so the page can render the score as a number rather than printing one wall of text.
+1. The **frontend** either takes pasted text, or POSTs an uploaded file to `/upload` and puts the extracted text in the box.
+2. The **frontend** then POSTs the resume and job description to `/roast`.
+3. **FastAPI** validates them, builds the prompt, and calls the model.
+4. The reply is **parsed server-side** into `score`, `missing`, `roast` and `verdict`, so the page can render the score as a number rather than printing one wall of text.
 
 The API key is loaded from the environment, never committed. `app.py` refuses to start without it, so a misconfigured deploy fails on deploy rather than on the first person who tries it.
 
@@ -91,19 +120,24 @@ Every test stubs the model, so the suite needs no API key and cannot spend one.
 
 What's covered is the parsing (the only place a wrong answer is silent — a bad parse renders a blank card that looks exactly like the app working), the endpoint's validation and error handling, and **the prompt itself**.
 
-That last one is the unusual part and the most important. There is no compiler for tone. Nobody softens a prompt on purpose — it happens one reasonable-looking edit at a time until the app is encouraging again. So `tests/test_prompt.py` asserts that the STRENGTHS field is gone, that praise and hedging are banned by name, that the scoring curve still has its bands, and that the "roast the document, not the person" rule is still there. CI runs it as its own step, so when it goes soft the failure says *Tone has not softened* rather than being one red tick among seventy.
+That last one is the unusual part and the most important. There is no compiler for tone. Nobody softens a prompt on purpose — it happens one reasonable-looking edit at a time until the app is encouraging again. So `tests/test_prompt.py` asserts that the STRENGTHS field is gone, that praise and hedging are banned by name, that the scoring curve still has its bands, and that the "roast the document, not the person" rule is still there. CI runs it as its own step, so when it goes soft the failure says *Tone has not softened* rather than being one red tick among a hundred and nine.
 
 ### The CLI
 
 ```bash
-RESUME_PATH=my_resume.txt python roaster.py
+python roaster.py                              # the bundled sample
+RESUME_PATH=my_resume.pdf python roaster.py    # a PDF, a .docx, or text
+RESUME_PATH=cv.docx JD_PATH=job.txt python roaster.py
 ```
 
-Defaults to `sample_resume.txt`, a synthetic resume built to be worth roasting. `resume.txt` and `resume.pdf` are gitignored — do not commit your own.
+Same extractor as the web upload, so anything you can drop on the page works
+here. Defaults to `sample_resume.txt`, a synthetic resume built to be worth
+roasting. `resume.txt` and `resume.pdf` are gitignored — do not commit your own.
 
 ## 🔮 Roadmap
 
-- [ ] PDF resume upload (drag & drop)
+- [x] PDF resume upload (drag & drop) — also Word and plain text
+- [ ] OCR, so a scanned resume can be read rather than refused
 - [ ] Support for multiple job descriptions at once
 - [ ] Shareable roast results
 

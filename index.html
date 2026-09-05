@@ -65,6 +65,25 @@
     }
     .roast { white-space: pre-wrap; font-size: 1.05rem; }
 
+    /* Upload */
+    .dropzone {
+      border: 2px dashed var(--line); border-radius: 6px;
+      padding: 22px; text-align: center; color: var(--muted);
+      cursor: pointer; transition: border-color .12s, background .12s;
+      margin: 8px 0 4px;
+    }
+    .dropzone:hover, .dropzone:focus-visible { border-color: var(--red); color: var(--text); }
+    .dropzone.dragging { border-color: var(--red); background: #2a1a1c; color: var(--text); }
+    .dropzone.busy { opacity: .6; cursor: progress; }
+    .dropzone strong { color: var(--text); }
+    .dropzone .formats { display: block; margin-top: 6px; font-size: .82rem; }
+    .file-note { color: var(--muted); font-size: .85rem; margin: 4px 0 10px; min-height: 1.2em; }
+    .file-note.bad { color: var(--red); }
+    .or {
+      text-align: center; color: var(--muted); font-size: .8rem;
+      text-transform: uppercase; letter-spacing: .12em; margin: 2px 0 6px;
+    }
+
     /* The verdict is the last thing read and gets no decoration to hide behind. */
     .verdict {
       border-left: 4px solid var(--red);
@@ -75,6 +94,16 @@
 <body>
   <h1>Resume Roaster 🔥</h1>
   <p class="tagline">Paste your resume and a job description. There is no encouraging part.</p>
+
+  <div id="dropzone" class="dropzone" tabindex="0" role="button"
+       aria-label="Upload your resume as a file">
+    <strong>Drop your resume here</strong> or click to choose a file
+    <span class="formats" id="formatList">PDF, Word, or plain text</span>
+  </div>
+  <input type="file" id="fileInput" hidden>
+  <p class="file-note" id="fileNote" role="status" aria-live="polite"></p>
+
+  <p class="or">or paste it</p>
 
   <textarea id="resume" aria-label="Your resume" placeholder="Paste your resume here..."></textarea>
   <textarea id="jd" aria-label="The job description" placeholder="Paste the job description here..."></textarea>
@@ -188,6 +217,97 @@
     }
 
     btn.addEventListener("click", roastMe);
+
+    /* ------------------------------------------------------------ upload -- */
+
+    const dropzone = document.getElementById("dropzone");
+    const fileInput = document.getElementById("fileInput");
+    const fileNote = document.getElementById("fileNote");
+    const resumeBox = document.getElementById("resume");
+
+    function note(message, bad) {
+      fileNote.textContent = message;
+      fileNote.classList.toggle("bad", Boolean(bad));
+    }
+
+    // The accept list comes from the server so it cannot drift from what the
+    // extractor actually handles. Failing to fetch it is not worth blocking
+    // on — the input just accepts anything and the server still decides.
+    fetch("/formats")
+      .then((response) => response.json())
+      .then((body) => {
+        fileInput.accept = body.extensions.join(",");
+        const labels = [...new Set(Object.values(body.labels))];
+        document.getElementById("formatList").textContent = labels.join(", ");
+      })
+      .catch(() => { /* the server is the authority either way */ });
+
+    async function uploadFile(file) {
+      if (!file) return;
+
+      dropzone.classList.add("busy");
+      note(`Reading ${file.name}...`);
+
+      const form = new FormData();
+      form.append("file", file);
+
+      try {
+        const response = await fetch("/upload", { method: "POST", body: form });
+        const body = await response.json().catch(() => null);
+
+        if (!response.ok) {
+          note((body && body.detail) || `Could not read that file (HTTP ${response.status}).`, true);
+          return;
+        }
+
+        resumeBox.value = body.text;
+        // Say what happened rather than silently swapping the box contents:
+        // the count is the quickest way to spot a half-extracted PDF.
+        note(
+          body.truncated
+            ? `${body.filename} — first ${body.text.length.toLocaleString()} of ${body.characters.toLocaleString()} characters. Check it, then roast.`
+            : `${body.filename} — ${body.characters.toLocaleString()} characters. Check it, then roast.`
+        );
+        resumeBox.focus();
+      } catch (err) {
+        note("Could not reach the server to read that file.", true);
+      } finally {
+        dropzone.classList.remove("busy");
+        // Reset so choosing the same file twice fires change again.
+        fileInput.value = "";
+      }
+    }
+
+    dropzone.addEventListener("click", () => fileInput.click());
+    dropzone.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        fileInput.click();
+      }
+    });
+    fileInput.addEventListener("change", () => uploadFile(fileInput.files[0]));
+
+    for (const type of ["dragenter", "dragover"]) {
+      dropzone.addEventListener(type, (event) => {
+        event.preventDefault();
+        dropzone.classList.add("dragging");
+      });
+    }
+    for (const type of ["dragleave", "drop"]) {
+      dropzone.addEventListener(type, () => dropzone.classList.remove("dragging"));
+    }
+    dropzone.addEventListener("drop", (event) => {
+      event.preventDefault();
+      uploadFile(event.dataTransfer.files[0]);
+    });
+
+    // A file dropped anywhere else would otherwise navigate away from the page,
+    // losing whatever is already typed in the boxes.
+    for (const type of ["dragover", "drop"]) {
+      window.addEventListener(type, (event) => {
+        if (!dropzone.contains(event.target)) event.preventDefault();
+      });
+    }
   </script>
 </body>
 </html>

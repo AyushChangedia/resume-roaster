@@ -1,0 +1,17 @@
+Jordan Avery Blake
+jordan.blake@example.com | linkedin.com/in/example
+
+Education
+Example State University — B.Sc. Computer Science, CGPA 8.1/10, 2024-2028
+Relevant coursework: Data Structures, Operating Systems, Machine Learning
+
+Experience
+AI Engineering Intern, Placeholder Labs (Remote), May 2026 - Jun 2026
+  Built an LLM-powered document summariser using Python and a hosted model API
+  Wrote prompt templates and evaluated outputs against a small labelled set
+
+Backend Intern, Example Systems (Remote), Jan 2026 - Mar 2026
+  Developed REST endpoints for a catalogue service using Node.js and Express
+
+Skills
+Python, JavaScript, SQL, Java, FastAPI, Express, React, Git, Docker, PostgreSQL
