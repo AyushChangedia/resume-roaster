@@ -2,6 +2,16 @@
 __pycache__/
 # Your actual resume. resume.txt used to be committed here, complete with a
 # real phone number, on a public repository.
-resume.txt
-resume.pdf
+#
+# Anchored with a leading slash on purpose. Unanchored, "resume.pdf" matches at
+# every depth, and it silently swallowed tests/fixtures/resume.pdf — the suite
+# passed locally and failed on a fresh clone with nine missing-file errors.
+# The file this is guarding is the one roaster.py reads by default, and that is
+# at the repo root.
+/resume.txt
+/resume.pdf
+/resume.docx
 *.resume.txt
+
+# ...but the test fixtures are meant to be committed. They are synthetic.
+!tests/fixtures/
