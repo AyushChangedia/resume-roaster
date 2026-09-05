@@ -77,6 +77,14 @@ def _from_pdf(data: bytes) -> str:
         reader = PdfReader(io.BytesIO(data))
     except PdfReadError as error:
         raise ExtractionError(f"That PDF could not be read — {error}") from error
+    except Exception as error:  # noqa: BLE001
+        # pypdf raises whatever the malformed structure happens to produce —
+        # ValueError, KeyError, struct.error, a decoder's own exception. None
+        # of those should reach the user as a 500 with a traceback.
+        raise ExtractionError(
+            f"That PDF could not be read ({type(error).__name__}). "
+            "It may be damaged — try re-exporting it, or paste the text instead."
+        ) from error
 
     if reader.is_encrypted:
         # An empty password opens the "protected against editing" case, which
@@ -96,7 +104,25 @@ def _from_pdf(data: bytes) -> str:
 
     # A resume is one or two pages. Anything past the cap is a thesis or a
     # bomb, and either way there is no reason to spend the CPU.
-    text = "\n".join((page.extract_text() or "") for page in pages[:MAX_PDF_PAGES])
+    #
+    # Page by page, because one damaged page should not cost the whole
+    # document. A resume whose second page has a corrupt font stream is still
+    # a resume, and the first page is most of it.
+    extracted: list[str] = []
+    failed = 0
+    for page in pages[:MAX_PDF_PAGES]:
+        try:
+            extracted.append(page.extract_text() or "")
+        except Exception:  # noqa: BLE001 - see the constructor note above
+            failed += 1
+
+    text = "\n".join(extracted)
+
+    if failed and len(text.strip()) < MIN_USEFUL_CHARS:
+        raise ExtractionError(
+            "That PDF is damaged — nothing could be read out of it. "
+            "Try re-exporting it, or paste the text instead."
+        )
 
     if len(text.strip()) < MIN_USEFUL_CHARS:
         raise ExtractionError(
@@ -116,6 +142,11 @@ def _from_docx(data: bytes) -> str:
         raise ExtractionError(
             "That file is a zip archive but not a Word document. "
             "If it is a .doc, save it as .docx first."
+        ) from error
+    except Exception as error:  # noqa: BLE001 - same reasoning as the PDF path
+        raise ExtractionError(
+            f"That Word document could not be read ({type(error).__name__}). "
+            "Try re-saving it, or paste the text instead."
         ) from error
 
     parts = [paragraph.text for paragraph in document.paragraphs]

@@ -162,3 +162,54 @@ def test_the_supported_map_is_the_single_source_of_truth():
     for extension, label in SUPPORTED.items():
         assert extension.startswith(".") and extension.islower(), extension
         assert label and not label.startswith("."), label
+
+
+# ------------------------------------------------------------ damaged files --
+
+
+def _corrupt(data: bytes) -> bytes:
+    """Flip one byte in the middle — what a bad download or bad disk produces."""
+    middle = len(data) // 2
+    return data[:middle] + bytes([data[middle] ^ 0xFF]) + data[middle + 1 :]
+
+
+def test_a_corrupted_pdf_raises_extraction_error_not_something_random():
+    # pypdf raises whatever the malformed structure happens to produce —
+    # ValueError from an Ascii85 decoder, KeyError, struct.error. Unhandled,
+    # those reach the browser as a 500 and read as "upload is broken".
+    with pytest.raises(ExtractionError):
+        extract_text(_corrupt(load("resume.pdf")), "resume.pdf")
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        b"%PDF-1.4\n",
+        b"%PDF-1.7\n" + b"\xde\xad\xbe\xef" * 400,
+        b"%PDF-1.4\n" + bytes(range(256)) * 8,
+    ],
+)
+def test_pdf_shaped_garbage_is_always_an_extraction_error(data):
+    with pytest.raises(ExtractionError):
+        extract_text(data, "resume.pdf")
+
+
+def test_a_corrupted_docx_raises_extraction_error():
+    with pytest.raises(ExtractionError):
+        extract_text(_corrupt(load("resume.docx")), "resume.docx")
+
+
+def test_nothing_escapes_as_anything_but_an_extraction_error():
+    # A blunt sweep. Whatever is thrown at the extractor, the caller only ever
+    # has to catch ExtractionError — anything else reaches the browser as a
+    # 500 and reads, correctly, as "the upload is broken".
+    samples = [
+        b"", b"\x00", b"%PDF-", b"PK\x03\x04", b"PK\x03\x04" + b"\x00" * 100,
+        bytes(range(256)), b"\xff\xfe", b"\xef\xbb\xbf",
+        load("resume.pdf")[:50], load("resume.docx")[:50],
+    ]
+    for sample in samples:
+        try:
+            extract_text(sample, "resume.pdf")
+        except ExtractionError:
+            pass  # the contract

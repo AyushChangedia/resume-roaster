@@ -145,3 +145,24 @@ def test_formats_matches_the_extraction_table(client):
     from extraction import SUPPORTED
 
     assert client.get("/formats").json()["extensions"] == sorted(SUPPORTED)
+
+
+# ------------------------------------------------------------------- /health --
+
+
+def test_health_reports_that_upload_is_available(client):
+    # The point of this endpoint: "the upload does not work" is either a bug or
+    # a stale deploy, and from a browser those look identical. A build without
+    # the feature answers 404 here, or answers with upload false.
+    body = client.get("/health").json()
+    assert body["status"] == "ok"
+    assert body["upload"] is True
+    assert ".pdf" in body["formats"]
+
+
+def test_health_needs_no_api_call(client, monkeypatch):
+    def explode(**kwargs):
+        raise AssertionError("the model was called by a health check")
+
+    monkeypatch.setattr(app_module.client.chat.completions, "create", explode)
+    assert client.get("/health").status_code == 200
