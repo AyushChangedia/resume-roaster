@@ -2,11 +2,12 @@
 Roast a resume from the terminal.
 
     python roaster.py
-    RESUME_PATH=my_resume.txt python roaster.py
-    RESUME_PATH=cv.txt JD_PATH=job.txt python roaster.py
+    RESUME_PATH=my_resume.pdf python roaster.py
+    RESUME_PATH=cv.docx JD_PATH=job.txt python roaster.py
 
-Same prompt and same parser as the web app, so the CLI and the browser cannot
-disagree about what a resume scores.
+Same prompt, same parser and same file extraction as the web app, so the CLI
+and the browser cannot disagree about what a resume scores or which files they
+can read.
 """
 
 import os
@@ -15,6 +16,7 @@ import sys
 from dotenv import load_dotenv
 from groq import APIError, Groq
 
+from extraction import ExtractionError, extract_text
 from parsing import RoastFormatError, parse_roast
 from prompt import SYSTEM_PROMPT, build_user_prompt
 
@@ -45,11 +47,28 @@ if not sys.stdout.isatty():
 
 
 def read(path: str) -> str:
+    """
+    Text from a file, whatever kind it is.
+
+    Through the same extractor the web app uses, so `RESUME_PATH=cv.pdf` works
+    here exactly as dropping cv.pdf on the page does. Reading these as UTF-8
+    text — which is what this did — turns a PDF into either a decode error or
+    a screenful of binary handed to the model.
+    """
     try:
-        with open(path, "r", encoding="utf-8") as handle:
-            return handle.read()
+        with open(path, "rb") as handle:
+            data = handle.read()
     except FileNotFoundError:
         sys.exit(f"No such file: {path}")
+    except IsADirectoryError:
+        sys.exit(f"That is a directory, not a file: {path}")
+    except PermissionError:
+        sys.exit(f"No permission to read {path}")
+
+    try:
+        return extract_text(data, path)
+    except ExtractionError as error:
+        sys.exit(f"{path}: {error}")
 
 
 def band_for(score: int) -> str:
