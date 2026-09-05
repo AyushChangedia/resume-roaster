@@ -153,6 +153,24 @@ async def upload(file: UploadFile = File(...)):
     }
 
 
+@app.get("/health")
+def health():
+    """
+    What is actually running.
+
+    Exists because "the upload does not work" has two very different causes —
+    a bug, or a deploy that has not picked up the new code — and from a
+    browser they look identical. Loading this says which: if `upload` is
+    false or the key is absent, the running build predates the upload feature.
+    """
+    return {
+        "status": "ok",
+        "upload": "/upload" in {route.path for route in app.routes if hasattr(route, "path")},
+        "formats": sorted(SUPPORTED),
+        "model": MODEL,
+    }
+
+
 @app.get("/formats")
 def formats():
     """What the file picker should accept. Built from one table in extraction.py."""
