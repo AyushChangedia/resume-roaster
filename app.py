@@ -1,4 +1,6 @@
 import os
+from pathlib import Path
+
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from pydantic import BaseModel, Field, field_validator
 from dotenv import load_dotenv
@@ -192,6 +194,14 @@ def formats():
     return {"extensions": sorted(SUPPORTED), "labels": SUPPORTED}
 
 
+# Resolved from this file, not from the working directory. FileResponse was
+# given the bare name "index.html", which only finds the page when the process
+# happens to have been started in the repository root. A serverless host runs
+# the handler from wherever it unpacked the bundle, so the one route a visitor
+# actually lands on answered 500 while every API route beneath it worked.
+INDEX_HTML = Path(__file__).resolve().parent / "index.html"
+
+
 @app.get("/")
 def serve_frontend():
-    return FileResponse("index.html")
+    return FileResponse(INDEX_HTML)
