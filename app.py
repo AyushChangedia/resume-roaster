@@ -1,4 +1,6 @@
 import os
+from pathlib import Path
+
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from pydantic import BaseModel, Field, field_validator
 from dotenv import load_dotenv
@@ -13,16 +15,23 @@ from prompt import SYSTEM_PROMPT, build_user_prompt
 load_dotenv()
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-if not GROQ_API_KEY:
-    # Without this the Groq client is constructed with api_key=None and the
-    # first roast fails deep inside an HTTP call, as an authentication error
-    # about a request nobody made. Say it at startup, where it is fixable.
-    raise RuntimeError(
-        "GROQ_API_KEY is not set. Put it in a .env file next to app.py "
-        "(GROQ_API_KEY=your_key_here) or set it in the environment."
-    )
 
-client = Groq(api_key=GROQ_API_KEY)
+MISSING_KEY_MESSAGE = (
+    "GROQ_API_KEY is not set. Locally, put it in a .env file next to app.py "
+    "(GROQ_API_KEY=your_key_here). On a host, set it as an environment "
+    "variable and redeploy."
+)
+
+# Raising here used to kill the process at import. On a long-running server
+# that is the right trade — it fails at startup, where somebody is watching,
+# rather than on the first roast. On a serverless host it is the wrong one:
+# the import *is* the request, so a missing key takes down every route,
+# including the page itself and /health, and the only thing the browser is
+# told is FUNCTION_INVOCATION_FAILED with no clue which function or why.
+#
+# So the app always starts. The one route that needs the key says so, with
+# the message above, and /health reports it before anybody clicks anything.
+client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 MODEL = "llama-3.3-70b-versatile"
 
@@ -79,6 +88,12 @@ class RoastRequest(BaseModel):
 
 @app.post("/roast")
 def roast(request: RoastRequest):
+    if client is None:
+        # 503, not 500: the service is correctly deployed and the code is
+        # fine — it is one environment variable short of being able to work,
+        # which is an operator's problem and is worth naming as one.
+        raise HTTPException(status_code=503, detail=MISSING_KEY_MESSAGE)
+
     user_prompt = build_user_prompt(request.resume, request.job_description)
 
     try:
@@ -164,10 +179,12 @@ def health():
     false or the key is absent, the running build predates the upload feature.
     """
     return {
-        "status": "ok",
+        "status": "ok" if client is not None else "degraded",
         "upload": "/upload" in {route.path for route in app.routes if hasattr(route, "path")},
         "formats": sorted(SUPPORTED),
         "model": MODEL,
+        # The single most common reason a working deploy cannot roast anything.
+        "groq_key": client is not None,
     }
 
 
@@ -177,6 +194,14 @@ def formats():
     return {"extensions": sorted(SUPPORTED), "labels": SUPPORTED}
 
 
+# Resolved from this file, not from the working directory. FileResponse was
+# given the bare name "index.html", which only finds the page when the process
+# happens to have been started in the repository root. A serverless host runs
+# the handler from wherever it unpacked the bundle, so the one route a visitor
+# actually lands on answered 500 while every API route beneath it worked.
+INDEX_HTML = Path(__file__).resolve().parent / "index.html"
+
+
 @app.get("/")
 def serve_frontend():
-    return FileResponse("index.html")
+    return FileResponse(INDEX_HTML)
