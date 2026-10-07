@@ -6,7 +6,9 @@ Upload or paste your resume, paste a job description, and get read by an LLM pla
 
 ## 🚀 Live Demo
 
-### 👉 **[Try it live: resume-roaster-fr4i.onrender.com](https://resume-roaster-fr4i.onrender.com)**
+### 👉 **[Try it live: resume-roaster-umber.vercel.app](https://resume-roaster-umber.vercel.app)**
+
+<sub>Also on Render at [resume-roaster-fr4i.onrender.com](https://resume-roaster-fr4i.onrender.com) — same app, but the free tier sleeps when idle, so the first open waits for a container to start.</sub>
 
 > ⏳ *Hosted on a free tier — the first load may take ~50 seconds to wake the server, then it's instant.*
 
@@ -123,16 +125,18 @@ Every test stubs the model, so the suite needs no API key and cannot spend one.
 ### Vercel
 
 Import the repository, set one environment variable, deploy. Nothing else to
-configure — `vercel.json` and `api/index.py` are committed.
+configure — `vercel.json` is committed and the preset is detected.
 
 | Setting | Value |
 | --- | --- |
-| Framework preset | **Other** |
+| Framework preset | **FastAPI** (auto-detected) |
 | Environment variable | `GROQ_API_KEY` |
 
-Vercel's Python runtime serves the ASGI app that `api/index.py` exports, and
-`vercel.json` routes every path to it, since this is one application rather
-than a page per file.
+Vercel detects the FastAPI preset and serves the ASGI app in `app.py` itself,
+so there is no handler file and no rewrite — a rewrite to a fixed destination
+sends every URL to that one path, and the app answers its own 404 for the whole
+site. `vercel.json` only sets what zero-config cannot know: the function needs
+60 seconds, because a roast waits on the model for up to 30.
 
 **If the deployment answers `500 FUNCTION_INVOCATION_FAILED`,** open
 `/health` — it works even when the roast does not:
@@ -143,9 +147,8 @@ than a page per file.
 | `"status": "ok"` | The app is fine; the failure is elsewhere. Check the function log. |
 | The page itself 500s | The function could not import at all. The log names the module. |
 
-The function is given 1024 MB and 60 seconds, because a roast waits on the
-model for up to 30. `.vercelignore` keeps the tests and dev requirements out of
-the bundle, so the cold start stays short.
+`.vercelignore` keeps the tests and dev requirements out of the bundle, so the
+cold start stays short.
 
 ### Render
 

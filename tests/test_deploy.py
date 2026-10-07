@@ -135,20 +135,20 @@ def test_the_index_path_is_absolute():
 
 # --------------------------------------------------------- the entry point --
 
-def test_vercel_handler_exports_the_same_app():
-    sys.path.insert(0, str(ROOT / "api"))
-    import index
-
+def test_app_exports_an_asgi_app_at_the_repository_root():
+    # Vercel's FastAPI preset looks for the ASGI application here. A handler
+    # under api/ is not needed, and a rewrite pointing at one is actively
+    # wrong: it sends every request to the literal path "/api/index", which
+    # is not a route, so the app answers its own 404 for the whole site.
     import app as app_module
 
-    assert index.app is app_module.app
+    assert callable(app_module.app)
+    assert (ROOT / "app.py").is_file()
 
 
-def test_vercel_json_routes_everything_to_the_one_function():
+def test_vercel_json_does_not_rewrite_the_path_away():
     config = json.loads((ROOT / "vercel.json").read_text())
-    rewrites = config["rewrites"]
-    assert any(r["source"] == "/(.*)" for r in rewrites), rewrites
-    assert all(r["destination"] == "/api/index" for r in rewrites)
+    assert "rewrites" not in config, config.get("rewrites")
 
 
 def test_the_function_outlasts_the_model_timeout():
@@ -157,7 +157,7 @@ def test_the_function_outlasts_the_model_timeout():
     import app as app_module
 
     config = json.loads((ROOT / "vercel.json").read_text())
-    max_duration = config["functions"]["api/index.py"]["maxDuration"]
+    max_duration = config["functions"]["app.py"]["maxDuration"]
     assert max_duration > app_module.REQUEST_TIMEOUT_SECONDS
 
 
