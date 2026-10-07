@@ -169,3 +169,13 @@ def test_the_bundle_leaves_out_what_it_does_not_run():
     }
     assert "tests/" in ignored
     assert "requirements-dev.txt" in ignored
+
+
+def test_vercel_json_does_not_mix_builds_and_functions():
+    # Vercel refuses the deployment outright: "The `functions` property cannot
+    # be used in conjunction with the `builds` property." `builds` is also
+    # redundant — the runtime detects api/*.py on its own — and setting it
+    # switches off every other zero-config default along with it.
+    config = json.loads((ROOT / "vercel.json").read_text())
+    assert "builds" not in config
+    assert "functions" in config
