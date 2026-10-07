@@ -1,0 +1,10 @@
+# Keep the function small: everything here is for developing or testing, and
+# none of it is imported at runtime. A fat bundle is a slow cold start, which
+# is the thing this deploy exists to avoid.
+tests/
+requirements-dev.txt
+pytest.ini
+.github/
+sample_resume.txt
+Procfile
+README.md
