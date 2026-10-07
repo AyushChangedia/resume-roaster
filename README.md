@@ -83,7 +83,7 @@ refusal with nothing to show for it.
 | **Frontend** | HTML, CSS, JavaScript (Fetch API, drag & drop) |
 | **Parsing** | pypdf, python-docx |
 | **Tests** | pytest — 109 tests, no API key needed |
-| **Deployment** | Render |
+| **Deployment** | Vercel (serverless) · Render (container) |
 
 ## ⚙️ How it works
 
@@ -92,7 +92,7 @@ refusal with nothing to show for it.
 3. **FastAPI** validates them, builds the prompt, and calls the model.
 4. The reply is **parsed server-side** into `score`, `missing`, `roast` and `verdict`, so the page can render the score as a number rather than printing one wall of text.
 
-The API key is loaded from the environment, never committed. `app.py` refuses to start without it, so a misconfigured deploy fails on deploy rather than on the first person who tries it.
+The API key is loaded from the environment, never committed. Without it the app still starts and the page still loads — only `/roast` refuses, with a 503 that names the missing variable, and `/health` reports `"groq_key": false`. Refusing to start instead would be the better trade on a long-running server and the worse one on a serverless host, where the import is the request and a missing key takes down every route including the page.
 
 ## 🖥️ Running locally
 
@@ -117,6 +117,42 @@ pytest
 ```
 
 Every test stubs the model, so the suite needs no API key and cannot spend one.
+
+## ☁️ Deploying
+
+### Vercel
+
+Import the repository, set one environment variable, deploy. Nothing else to
+configure — `vercel.json` and `api/index.py` are committed.
+
+| Setting | Value |
+| --- | --- |
+| Framework preset | **Other** |
+| Environment variable | `GROQ_API_KEY` |
+
+Vercel's Python runtime serves the ASGI app that `api/index.py` exports, and
+`vercel.json` routes every path to it, since this is one application rather
+than a page per file.
+
+**If the deployment answers `500 FUNCTION_INVOCATION_FAILED`,** open
+`/health` — it works even when the roast does not:
+
+| What `/health` says | What it means |
+| --- | --- |
+| `"groq_key": false` | The environment variable is missing. Add it and **redeploy** — Vercel does not apply a new variable to an existing deployment. |
+| `"status": "ok"` | The app is fine; the failure is elsewhere. Check the function log. |
+| The page itself 500s | The function could not import at all. The log names the module. |
+
+The function is given 1024 MB and 60 seconds, because a roast waits on the
+model for up to 30. `.vercelignore` keeps the tests and dev requirements out of
+the bundle, so the cold start stays short.
+
+### Render
+
+`Procfile` still works and is unchanged: `uvicorn app:app`, with `GROQ_API_KEY`
+in the environment. The free tier sleeps when idle, so the first request after
+a quiet spell waits for a container to start — which is the reason for the
+Vercel option, not a fault in the app.
 
 What's covered is the parsing (the only place a wrong answer is silent — a bad parse renders a blank card that looks exactly like the app working), the endpoint's validation and error handling, and **the prompt itself**.
 
